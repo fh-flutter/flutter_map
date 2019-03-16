@@ -11,6 +11,7 @@ import 'package:flutter_map/src/map/map.dart';
 import 'package:flutter_map/src/plugins/plugin.dart';
 import 'package:latlong/latlong.dart';
 
+export 'src/core/kfb_info.dart';
 export 'src/plugins/plugin.dart';
 export 'src/layer/layer.dart';
 export 'src/layer/tile_layer.dart';
