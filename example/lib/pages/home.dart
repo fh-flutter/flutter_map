@@ -1,40 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import '../widgets/drawer.dart';
 import 'package:latlong/latlong.dart';
+
+import '../widgets/drawer.dart';
 
 class HomePage extends StatelessWidget {
   static const String route = '/';
-  Widget build(BuildContext context) {
-    var markers = <Marker>[
-      new Marker(
-        width: 80.0,
-        height: 80.0,
-        point: new LatLng(51.5, -0.09),
-        builder: (ctx) => new Container(
-              child: new FlutterLogo(),
-            ),
-      ),
-      new Marker(
-        width: 80.0,
-        height: 80.0,
-        point: new LatLng(53.3498, -6.2603),
-        builder: (ctx) => new Container(
-              child: new FlutterLogo(
-                colors: Colors.green,
-              ),
-            ),
-      ),
-      new Marker(
-        width: 80.0,
-        height: 80.0,
-        point: new LatLng(48.8566, 2.3522),
-        builder: (ctx) => new Container(
-              child: new FlutterLogo(colors: Colors.purple),
-            ),
-      ),
-    ];
 
+  Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(title: new Text("Home")),
       drawer: buildDrawer(context, route),
@@ -49,15 +22,17 @@ class HomePage extends StatelessWidget {
             new Flexible(
               child: new FlutterMap(
                 options: new MapOptions(
-                  center: new LatLng(51.5, -0.09),
-                  zoom: 5.0,
+                  center: new LatLng(0, 0),
+                  zoom: 0.0,
+                  maxZoom: 8.0,
+                  minZoom: 0
                 ),
                 layers: [
                   new TileLayerOptions(
                       urlTemplate:
-                          "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-                      subdomains: ['a', 'b', 'c']),
-                  new MarkerLayerOptions(markers: markers)
+                          "https://label.hzztai.com/image.php?file=hzzt_test%2F20181025_jinyu_pos300%2F2018-10-18%2019_12_14.kfb"
+//                          "https://label.hzztai.com/image.php?file=P16%2F2018-11-27+13_55_44.kfb&x={x}&y={y}&level={z}&scale={s}"
+                  )
                 ],
               ),
             ),

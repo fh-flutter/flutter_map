@@ -1,17 +1,19 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_image/network.dart';
 import 'package:flutter_map/src/core/bounds.dart';
+import 'package:flutter_map/src/core/kfb_info.dart';
 import 'package:flutter_map/src/core/point.dart';
 import 'package:flutter_map/src/core/util.dart' as util;
 import 'package:flutter_map/src/map/map.dart';
 import 'package:latlong/latlong.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:tuple/tuple.dart';
-import 'package:flutter_image/network.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 
 import 'layer.dart';
 
@@ -97,6 +99,8 @@ class TileLayerOptions extends LayerOptions {
   ImageProvider placeholderImage;
   Map<String, String> additionalOptions;
 
+  final KFBInfo kfbInfo;
+
   TileLayerOptions(
       {this.urlTemplate,
       this.tileSize = 256.0,
@@ -112,6 +116,7 @@ class TileLayerOptions extends LayerOptions {
       this.tms = false,
       this.fromAssets = true,
       this.cachedTiles = true,
+      this.kfbInfo,
       rebuild})
       : super(rebuild: rebuild);
 }
@@ -165,18 +170,27 @@ class _TileLayerState extends State<TileLayer> {
   }
 
   String getTileUrl(Coords coords) {
+    int z = coords.z.round() + 8;
     var data = <String, String>{
       'x': coords.x.round().toString(),
       'y': coords.y.round().toString(),
-      'z': coords.z.round().toString(),
-      's': _getSubdomain(coords)
+      'z': coords.z.round().toString()
     };
+    if (z >= widget.options.kfbInfo.fileNum) {
+      z = widget.options.kfbInfo.scanScale;
+      data['s'] = z.toStringAsFixed(6);
+      data['z'] = z.toString();
+    } else {
+      double tempZ = widget.options.kfbInfo.scanScale / pow(2, widget.options.kfbInfo.fileNum - z);
+      data['s'] = tempZ.toStringAsFixed(6);
+      data['z'] =  widget.options.kfbInfo.ratioMap[tempZ.toStringAsFixed(6)] ?? '0';
+    }
+    print(data);
     if (this.options.tms) {
       data['y'] = _invertY(coords.y.round(), coords.z.round()).toString();
     }
-    Map<String, String> allOpts = new Map.from(data)
-      ..addAll(this.options.additionalOptions);
-    return util.template(this.options.urlTemplate, allOpts);
+    Map<String, String> allOpts = new Map.from(data)..addAll(this.options.additionalOptions);
+    return util.template(this.options.urlTemplate + '&x={x}&y={y}&level={z}&scale={s}', allOpts);
   }
 
   int _invertY(int y, int z) {
@@ -242,13 +256,11 @@ class _TileLayerState extends State<TileLayer> {
     var tileRange = _pxBoundsToTileRange(pixelBounds);
     var margin = this.options.keepBuffer ?? 2;
     var noPruneRange = new Bounds(
-        tileRange.bottomLeft - new CustomPoint(margin, -margin),
-        tileRange.topRight + new CustomPoint(margin, -margin));
+        tileRange.bottomLeft - new CustomPoint(margin, -margin), tileRange.topRight + new CustomPoint(margin, -margin));
     for (var tileKey in _tiles.keys) {
       var tile = _tiles[tileKey];
       var c = tile.coords;
-      if (c.z != _tileZoom ||
-          !noPruneRange.contains(new CustomPoint(c.x, c.y))) {
+      if (c.z != _tileZoom || !noPruneRange.contains(new CustomPoint(c.x, c.y))) {
         tile.current = false;
       }
     }
@@ -307,29 +319,15 @@ class _TileLayerState extends State<TileLayer> {
     // wrapping
     this._wrapX = crs.wrapLng;
     if (_wrapX != null) {
-      var first = (map.project(new LatLng(0.0, crs.wrapLng.item1), tileZoom).x /
-              tileSize.x)
-          .floor()
-          .toDouble();
-      var second =
-          (map.project(new LatLng(0.0, crs.wrapLng.item2), tileZoom).x /
-                  tileSize.y)
-              .ceil()
-              .toDouble();
+      var first = (map.project(new LatLng(0.0, crs.wrapLng.item1), tileZoom).x / tileSize.x).floor().toDouble();
+      var second = (map.project(new LatLng(0.0, crs.wrapLng.item2), tileZoom).x / tileSize.y).ceil().toDouble();
       _wrapX = new Tuple2(first, second);
     }
 
     this._wrapY = crs.wrapLat;
     if (_wrapY != null) {
-      var first = (map.project(new LatLng(crs.wrapLat.item1, 0.0), tileZoom).y /
-              tileSize.x)
-          .floor()
-          .toDouble();
-      var second =
-          (map.project(new LatLng(crs.wrapLat.item2, 0.0), tileZoom).y /
-                  tileSize.y)
-              .ceil()
-              .toDouble();
+      var first = (map.project(new LatLng(crs.wrapLat.item1, 0.0), tileZoom).y / tileSize.x).floor().toDouble();
+      var second = (map.project(new LatLng(crs.wrapLat.item2, 0.0), tileZoom).y / tileSize.y).ceil().toDouble();
       _wrapY = new Tuple2(first, second);
     }
   }
@@ -375,8 +373,7 @@ class _TileLayerState extends State<TileLayer> {
 
     if (queue.length > 0) {
       for (var i = 0; i < queue.length; i++) {
-        _tiles[_tileCoordsToKey(queue[i])] =
-            new Tile(_wrapCoords(queue[i]), true);
+        _tiles[_tileCoordsToKey(queue[i])] = new Tile(_wrapCoords(queue[i]), true);
       }
     }
 
@@ -426,10 +423,8 @@ class _TileLayerState extends State<TileLayer> {
     var crs = map.options.crs;
     if (!crs.infinite) {
       var bounds = _globalTileRange;
-      if ((crs.wrapLng == null &&
-              (coords.x < bounds.min.x || coords.x > bounds.max.x)) ||
-          (crs.wrapLat == null &&
-              (coords.y < bounds.min.y || coords.y > bounds.max.y))) {
+      if ((crs.wrapLng == null && (coords.x < bounds.min.x || coords.x > bounds.max.x)) ||
+          (crs.wrapLat == null && (coords.y < bounds.min.y || coords.y > bounds.max.y))) {
         return false;
       }
     }
@@ -457,9 +452,7 @@ class _TileLayerState extends State<TileLayer> {
         child: new FadeInImage(
           fadeInDuration: const Duration(milliseconds: 100),
           key: new Key(_tileCoordsToKey(coords)),
-          placeholder: options.placeholderImage != null
-              ? options.placeholderImage
-              : new MemoryImage(kTransparentImage),
+          placeholder: options.placeholderImage != null ? options.placeholderImage : new MemoryImage(kTransparentImage),
           image: _getImageProvider(getTileUrl(coords)),
           fit: BoxFit.fill,
         ),
@@ -485,12 +478,8 @@ class _TileLayerState extends State<TileLayer> {
 
   Coords _wrapCoords(Coords coords) {
     var newCoords = new Coords(
-      _wrapX != null
-          ? util.wrapNum(coords.x.toDouble(), _wrapX)
-          : coords.x.toDouble(),
-      _wrapY != null
-          ? util.wrapNum(coords.y.toDouble(), _wrapY)
-          : coords.y.toDouble(),
+      _wrapX != null ? util.wrapNum(coords.x.toDouble(), _wrapX) : coords.x.toDouble(),
+      _wrapY != null ? util.wrapNum(coords.y.toDouble(), _wrapY) : coords.y.toDouble(),
     );
     newCoords.z = coords.z.toDouble();
     return newCoords;
@@ -499,14 +488,6 @@ class _TileLayerState extends State<TileLayer> {
   CustomPoint _getTilePos(Coords coords) {
     var level = _levels[coords.z];
     return coords.scaleBy(this.getTileSize()) - level.origin;
-  }
-
-  String _getSubdomain(Coords coords) {
-    if (options.subdomains.isEmpty) {
-      return "";
-    }
-    var index = (coords.x + coords.y).round() % this.options.subdomains.length;
-    return options.subdomains[index];
   }
 }
 
