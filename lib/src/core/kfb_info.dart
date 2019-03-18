@@ -4,7 +4,7 @@ class KFBInfo {
   int height;
   int imageBlockLen;
   double imageCapRes;
-  Map<String, String> ratioMap;
+  Map<String, dynamic> ratioMap;
   int scanScale;
 
   KFBInfo.fromJson(Map<String, dynamic> data) {
