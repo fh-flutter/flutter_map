@@ -102,7 +102,7 @@ class TileLayerOptions extends LayerOptions {
   final KFBInfo kfbInfo;
 
   TileLayerOptions(
-      {this.urlTemplate,
+    {this.urlTemplate,
       this.tileSize = 256.0,
       this.maxZoom = 18.0,
       this.zoomReverse = false,
@@ -118,7 +118,7 @@ class TileLayerOptions extends LayerOptions {
       this.cachedTiles = true,
       this.kfbInfo,
       rebuild})
-      : super(rebuild: rebuild);
+    : super(rebuild: rebuild);
 }
 
 class TileLayer extends StatefulWidget {
@@ -169,8 +169,18 @@ class _TileLayerState extends State<TileLayer> {
     });
   }
 
+  double getRealZ(int z) {
+    double tempZ = widget.options.kfbInfo.scanScale / pow(2, widget.options.kfbInfo.fileNum - z);
+    String tempS = tempZ.toStringAsFixed(6);
+    if (widget.options.kfbInfo.ratioMap[tempS] == null) {
+      return getRealZ(z + 1);
+    } else {
+      return tempZ;
+    }
+  }
+
   String getTileUrl(Coords coords) {
-    int z = coords.z.round() + 8;
+    int z = coords.z.round() + (log(widget.options.kfbInfo.imageBlockLen) / ln2).round();
     var data = <String, String>{
       'x': coords.x.round().toString(),
       'y': coords.y.round().toString(),
@@ -181,9 +191,9 @@ class _TileLayerState extends State<TileLayer> {
       data['s'] = z.toStringAsFixed(6);
       data['z'] = z.toString();
     } else {
-      double tempZ = widget.options.kfbInfo.scanScale / pow(2, widget.options.kfbInfo.fileNum - z);
+      double tempZ = getRealZ(z ?? 0);
       data['s'] = tempZ.toStringAsFixed(6);
-      data['z'] =  widget.options.kfbInfo.ratioMap[tempZ.toStringAsFixed(6)] ?? '0';
+      data['z'] =  widget.options.kfbInfo.ratioMap[tempZ.toStringAsFixed(6)];
     }
     print(data);
     if (this.options.tms) {
@@ -256,7 +266,7 @@ class _TileLayerState extends State<TileLayer> {
     var tileRange = _pxBoundsToTileRange(pixelBounds);
     var margin = this.options.keepBuffer ?? 2;
     var noPruneRange = new Bounds(
-        tileRange.bottomLeft - new CustomPoint(margin, -margin), tileRange.topRight + new CustomPoint(margin, -margin));
+      tileRange.bottomLeft - new CustomPoint(margin, -margin), tileRange.topRight + new CustomPoint(margin, -margin));
     for (var tileKey in _tiles.keys) {
       var tile = _tiles[tileKey];
       var c = tile.coords;
@@ -424,7 +434,7 @@ class _TileLayerState extends State<TileLayer> {
     if (!crs.infinite) {
       var bounds = _globalTileRange;
       if ((crs.wrapLng == null && (coords.x < bounds.min.x || coords.x > bounds.max.x)) ||
-          (crs.wrapLat == null && (coords.y < bounds.min.y || coords.y > bounds.max.y))) {
+        (crs.wrapLat == null && (coords.y < bounds.min.y || coords.y > bounds.max.y))) {
         return false;
       }
     }
