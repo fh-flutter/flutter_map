@@ -13,10 +13,9 @@ import 'package:flutter_map/src/core/point.dart';
 import 'package:flutter_map/src/core/util.dart' as util;
 import 'package:flutter_map/src/map/map.dart';
 import 'package:latlong/latlong.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:transparent_image/transparent_image.dart';
-import 'package:tuple/tuple.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:tuple/tuple.dart';
 
 import 'layer.dart';
 
@@ -126,23 +125,22 @@ class TileLayerOptions extends LayerOptions {
 
   final KFBInfo kfbInfo;
 
-  TileLayerOptions(
-    {this.urlTemplate,
-      this.tileSize = 256.0,
-      this.maxZoom = 18.0,
-      this.zoomReverse = false,
-      this.zoomOffset = 0.0,
-      this.additionalOptions = const <String, String>{},
-      this.subdomains = const <String>[],
-      this.keepBuffer = 2,
-      this.backgroundColor = const Color(0xFFE0E0E0), // grey[300]
-      this.placeholderImage,
-      this.offlineMode = false,
-      this.tms = false,
-      this.fromAssets = true,
-      this.cachedTiles = true,
-      this.kfbInfo,
-      rebuild})
+  TileLayerOptions({this.urlTemplate,
+    this.tileSize = 256.0,
+    this.maxZoom = 18.0,
+    this.zoomReverse = false,
+    this.zoomOffset = 0.0,
+    this.additionalOptions = const <String, String>{},
+    this.subdomains = const <String>[],
+    this.keepBuffer = 2,
+    this.backgroundColor = const Color(0xFFE0E0E0), // grey[300]
+    this.placeholderImage,
+    this.offlineMode = false,
+    this.tms = false,
+    this.fromAssets = true,
+    this.cachedTiles = true,
+    this.kfbInfo,
+    rebuild})
     : super(rebuild: rebuild);
 }
 
@@ -218,13 +216,14 @@ class _TileLayerState extends State<TileLayer> {
     } else {
       double tempZ = getRealZ(z ?? 0);
       data['s'] = tempZ.toStringAsFixed(6);
-      data['z'] =  widget.options.kfbInfo.ratioMap[tempZ.toStringAsFixed(6)];
+      data['z'] = widget.options.kfbInfo.ratioMap[tempZ.toStringAsFixed(6)];
     }
     print(data);
     if (this.options.tms) {
       data['y'] = _invertY(coords.y.round(), coords.z.round()).toString();
     }
-    Map<String, String> allOpts = new Map.from(data)..addAll(this.options.additionalOptions);
+    Map<String, String> allOpts = new Map.from(data)
+      ..addAll(this.options.additionalOptions);
     return util.template(this.options.urlTemplate + '&x={x}&y={y}&level={z}&scale={s}', allOpts);
   }
 
@@ -291,11 +290,11 @@ class _TileLayerState extends State<TileLayer> {
     var tileRange = _pxBoundsToTileRange(pixelBounds);
     var margin = this.options.keepBuffer ?? 2;
     var noPruneRange = new Bounds(
-      tileRange.bottomLeft - new CustomPoint(margin, -margin), tileRange.topRight + new CustomPoint(margin, -margin));
+      tileRange.bottomLeft - new CustomPoint(margin, - margin), tileRange.topRight + new CustomPoint(margin, - margin));
     for (var tileKey in _tiles.keys) {
       var tile = _tiles[tileKey];
       var c = tile.coords;
-      if (c.z != _tileZoom || !noPruneRange.contains(new CustomPoint(c.x, c.y))) {
+      if (c.z != _tileZoom || ! noPruneRange.contains(new CustomPoint(c.x, c.y))) {
         tile.current = false;
       }
     }
@@ -354,15 +353,23 @@ class _TileLayerState extends State<TileLayer> {
     // wrapping
     this._wrapX = crs.wrapLng;
     if (_wrapX != null) {
-      var first = (map.project(new LatLng(0.0, crs.wrapLng.item1), tileZoom).x / tileSize.x).floor().toDouble();
-      var second = (map.project(new LatLng(0.0, crs.wrapLng.item2), tileZoom).x / tileSize.y).ceil().toDouble();
+      var first = (map
+        .project(new LatLng(0.0, crs.wrapLng.item1), tileZoom)
+        .x / tileSize.x).floor().toDouble();
+      var second = (map
+        .project(new LatLng(0.0, crs.wrapLng.item2), tileZoom)
+        .x / tileSize.y).ceil().toDouble();
       _wrapX = new Tuple2(first, second);
     }
 
     this._wrapY = crs.wrapLat;
     if (_wrapY != null) {
-      var first = (map.project(new LatLng(crs.wrapLat.item1, 0.0), tileZoom).y / tileSize.x).floor().toDouble();
-      var second = (map.project(new LatLng(crs.wrapLat.item2, 0.0), tileZoom).y / tileSize.y).ceil().toDouble();
+      var first = (map
+        .project(new LatLng(crs.wrapLat.item1, 0.0), tileZoom)
+        .y / tileSize.x).floor().toDouble();
+      var second = (map
+        .project(new LatLng(crs.wrapLat.item2, 0.0), tileZoom)
+        .y / tileSize.y).ceil().toDouble();
       _wrapY = new Tuple2(first, second);
     }
   }
@@ -397,7 +404,7 @@ class _TileLayerState extends State<TileLayer> {
         var coords = new Coords(i.toDouble(), j.toDouble());
         coords.z = this._tileZoom;
 
-        if (!this._isValidTile(coords)) {
+        if (! this._isValidTile(coords)) {
           continue;
         }
 
@@ -456,7 +463,7 @@ class _TileLayerState extends State<TileLayer> {
 
   bool _isValidTile(Coords coords) {
     var crs = map.options.crs;
-    if (!crs.infinite) {
+    if (! crs.infinite) {
       var bounds = _globalTileRange;
       if ((crs.wrapLng == null && (coords.x < bounds.min.x || coords.x > bounds.max.x)) ||
         (crs.wrapLat == null && (coords.y < bounds.min.y || coords.y > bounds.max.y))) {
@@ -483,15 +490,19 @@ class _TileLayerState extends State<TileLayer> {
       top: pos.y.toDouble(),
       width: width.toDouble(),
       height: height.toDouble(),
-      child: new Container(
-        child: new FadeInImage(
-          fadeInDuration: const Duration(milliseconds: 100),
-          key: new Key(_tileCoordsToKey(coords)),
-          placeholder: options.placeholderImage != null ? options.placeholderImage : new MemoryImage(kTransparentImage),
-          image: _getImageProvider(getTileUrl(coords)),
-          fit: BoxFit.fill,
-        ),
+      child: Image(
+        key: Key(_tileCoordsToKey(coords)),
+        image: _getImageProvider(getTileUrl(coords)), fit: BoxFit.cover,
       ),
+//      child: new Container(
+//        child: new FadeInImage(
+//          fadeInDuration: const Duration(milliseconds: 100),
+//          key: new Key(_tileCoordsToKey(coords)),
+//          placeholder: options.placeholderImage != null ? options.placeholderImage : new MemoryImage(kTransparentImage),
+//          image: _getImageProvider(getTileUrl(coords)),
+//          fit: BoxFit.fill,
+//        ),
+//      ),
     );
   }
 
