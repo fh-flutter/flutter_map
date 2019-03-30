@@ -5,6 +5,7 @@ import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:flutter_image/network.dart';
 import 'package:flutter_map/src/core/bounds.dart';
 import 'package:flutter_map/src/core/kfb_info.dart';
@@ -12,10 +13,34 @@ import 'package:flutter_map/src/core/point.dart';
 import 'package:flutter_map/src/core/util.dart' as util;
 import 'package:flutter_map/src/map/map.dart';
 import 'package:latlong/latlong.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:transparent_image/transparent_image.dart';
 import 'package:tuple/tuple.dart';
+import 'package:path/path.dart' as p;
 
 import 'layer.dart';
+
+class CustomCacheManager extends BaseCacheManager {
+  static const key = "customCache";
+
+  static CustomCacheManager _instance;
+
+  factory CustomCacheManager() {
+    if (_instance == null) {
+      _instance = new CustomCacheManager._();
+    }
+    return _instance;
+  }
+
+  CustomCacheManager._() : super(key,
+    maxAgeCacheObject: Duration(days: 14),
+    maxNrOfCacheObjects: 65535);
+
+  Future<String> getFilePath() async {
+    var directory = await getTemporaryDirectory();
+    return p.join(directory.path, key);
+  }
+}
 
 class TileLayerOptions extends LayerOptions {
   ///Defines the structure to create the URLs for the tiles.
@@ -479,7 +504,7 @@ class _TileLayerState extends State<TileLayer> {
       }
     } else {
       if (options.cachedTiles) {
-        return new CachedNetworkImageProvider(url);
+        return new CachedNetworkImageProvider(url, cacheManager: CustomCacheManager());
       } else {
         return new NetworkImageWithRetry(url);
       }
